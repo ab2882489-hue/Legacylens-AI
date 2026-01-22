@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DepGraph Viz | Hackathon Demo</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --border: #cbd5e1;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h2 { margin-top: 0; }
+
+        .container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            flex-grow: 1;
+            min-height: 0;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea {
+            flex-grow: 1;
+            width: 100%;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            resize: none;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        #graph-container {
+            overflow: auto;
+            position: relative;
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            min-height: 500px;
+        }
+
+        .node circle { fill: #dbeafe; stroke: var(--primary); stroke-width: 2; }
+        .node text { font-size: 12px; font-weight: 500; text-anchor: middle; }
+        .edge { stroke: #94a3b8; stroke-width: 2; marker-end: url(#arrowhead); }
+
+        .error { color: #dc2626; font-size: 0.9rem; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <h2>Dependency Graph Generator</h2>
+
+    <div class="container">
+        <div class="panel">
+            <textarea id="jsonInput" placeholder='{ "files": ["main.py", "utils.py"], "code": "..." }'></textarea>
+            <button id="generateBtn">Generate Dependency Graph</button>
+            <div id="errorMsg" class="error"></div>
+        </div>
+
+        <div class="panel" id="graph-container">
+            <svg id="canvas">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="20" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+                    </marker>
+                </defs>
+                <g id="viewport"></g>
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('viewport');
+        const errorMsg = document.getElementById('errorMsg');
+        const btn = document.getElementById('generateBtn');
+
+        btn.addEventListener('click', async () => {
+            const rawInput = document.getElementById('jsonInput').value;
+            errorMsg.style.display = 'none';
+            canvas.innerHTML = '';
+
+            let parsed;
+            try {
+                parsed = JSON.parse(rawInput);
+            } catch (e) {
+                return showError("Invalid JSON input.");
+            }
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/dependency-graph', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parsed)
+                });
+
+                if (!response.ok) throw new Error('Server responded with error');
+                
+                const data = await response.json();
+                renderGraph(data.dependency_graph);
+            } catch (e) {
+                showError("Backend unavailable or request failed.");
+            }
+        });
+
+        function renderGraph(graph) {
+            const { nodes, edges } = graph;
+            const width = document.getElementById('graph-container').clientWidth;
+            const height = 500;
+            const spacing = width / (nodes.length + 1);
+            const y = height / 2;
+
+            const nodePositions = {};
+
+            // Render Edges
+            edges.forEach(([from, to]) => {
+                const fromIdx = nodes.indexOf(from);
+                const toIdx = nodes.indexOf(to);
+                
+                if (fromIdx === -1 || toIdx === -1) return;
+
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", (fromIdx + 1) * spacing);
+                line.setAttribute("y1", y);
+                line.setAttribute("x2", (toIdx + 1) * spacing);
+                line.setAttribute("y2", y);
+                line.setAttribute("class", "edge");
+                canvas.appendChild(line);
+            });
+
+            // Render Nodes
+            nodes.forEach((filename, i) => {
+                const x = (i + 1) * spacing;
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute("class", "node");
+
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", x);
+                circle.setAttribute("cy", y);
+                circle.setAttribute("r", 20);
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", x);
+                text.setAttribute("y", y + 35);
+                text.textContent = filename;
+
+                g.appendChild(circle);
+                g.appendChild(text);
+                canvas.appendChild(g);
+            });
+        }
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
