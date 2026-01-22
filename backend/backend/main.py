@@ -53,3 +53,14 @@ class DependencyGraphRequest(BaseModel):
 def dependency_graph(request: DependencyGraphRequest):
     graph = generate_dependency_graph(request.files)
     return {"dependency_graph": graph}
+from auto_documentation import generate_technical_documentation
+from pydantic import BaseModel
+from typing import Dict
+
+class DocumentationRequest(BaseModel):
+    files: Dict[str, str]
+
+@app.post("/auto-documentation")
+def auto_documentation(request: DocumentationRequest):
+    doc = generate_technical_documentation(request.files)
+    return {"documentation": doc}
