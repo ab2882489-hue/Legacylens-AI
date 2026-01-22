@@ -76,3 +76,14 @@ class RepoQuestionRequest(BaseModel):
 def ask_repo(request: RepoQuestionRequest):
     answer = answer_repo_question(request.question, request.files)
     return {"answer": answer}
+from risk_analyzer import analyze_system_risks
+from pydantic import BaseModel
+from typing import Dict
+
+class RiskAnalysisRequest(BaseModel):
+    files: Dict[str, str]
+
+@app.post("/risk-analysis")
+def risk_analysis(request: RiskAnalysisRequest):
+    result = analyze_system_risks(request.files)
+    return {"risk_report": result}
