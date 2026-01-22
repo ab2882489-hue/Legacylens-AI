@@ -64,3 +64,15 @@ class DocumentationRequest(BaseModel):
 def auto_documentation(request: DocumentationRequest):
     doc = generate_technical_documentation(request.files)
     return {"documentation": doc}
+from repo_question_answer import answer_repo_question
+from pydantic import BaseModel
+from typing import Dict
+
+class RepoQuestionRequest(BaseModel):
+    question: str
+    files: Dict[str, str]
+
+@app.post("/ask-repo")
+def ask_repo(request: RepoQuestionRequest):
+    answer = answer_repo_question(request.question, request.files)
+    return {"answer": answer}
