@@ -30,3 +30,15 @@ def explain_file(request: FileExplainRequest):
 def analyze_files(request: MultiFileRequest):
     analysis = analyze_multiple_files(request.files)
     return {"analysis": analysis}
+from impact_analysis import impact_analysis
+from pydantic import BaseModel
+from typing import Dict
+
+class ImpactAnalysisRequest(BaseModel):
+    target_file: str
+    files: Dict[str, str]
+
+@app.post("/impact-analysis")
+def analyze_impact(request: ImpactAnalysisRequest):
+    result = impact_analysis(request.target_file, request.files)
+    return {"impact_analysis": result}
