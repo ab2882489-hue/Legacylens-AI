@@ -42,3 +42,14 @@ class ImpactAnalysisRequest(BaseModel):
 def analyze_impact(request: ImpactAnalysisRequest):
     result = impact_analysis(request.target_file, request.files)
     return {"impact_analysis": result}
+from dependency_visualizer import generate_dependency_graph
+from pydantic import BaseModel
+from typing import Dict
+
+class DependencyGraphRequest(BaseModel):
+    files: Dict[str, str]
+
+@app.post("/dependency-graph")
+def dependency_graph(request: DependencyGraphRequest):
+    graph = generate_dependency_graph(request.files)
+    return {"dependency_graph": graph}
