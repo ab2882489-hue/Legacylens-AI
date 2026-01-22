@@ -87,3 +87,14 @@ class RiskAnalysisRequest(BaseModel):
 def risk_analysis(request: RiskAnalysisRequest):
     result = analyze_system_risks(request.files)
     return {"risk_report": result}
+from system_summary import generate_system_summary
+from pydantic import BaseModel
+from typing import Dict
+
+class SystemSummaryRequest(BaseModel):
+    files: Dict[str, str]
+
+@app.post("/system-summary")
+def system_summary(request: SystemSummaryRequest):
+    summary = generate_system_summary(request.files)
+    return {"summary": summary}
